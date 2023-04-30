@@ -10,14 +10,15 @@ use log::{info};
 use windows::{
     core::*, Win32::Foundation::*, Win32::Graphics::Direct3D::Fxc::*, Win32::Graphics::Direct3D::*,
     Win32::Graphics::Direct3D12::*, Win32::Graphics::Dxgi::Common::*, Win32::Graphics::Dxgi::*,
-    Win32::System::LibraryLoader::*, Win32::System::Threading::*,
-    Win32::UI::WindowsAndMessaging::*,
+    // Win32::System::LibraryLoader::*,
+    Win32::System::Threading::*,
+    // Win32::UI::WindowsAndMessaging::*,
 };
 
 use std::mem::transmute;
 
 trait DXSample {
-    fn new(command_line: &SampleCommandLine) -> Result<Self>
+    fn new() -> Result<Self>
     where
         Self: Sized;
 
@@ -25,8 +26,6 @@ trait DXSample {
 
     fn update(&mut self) {}
     fn render(&mut self) {}
-    fn on_key_up(&mut self, _key: u8) {}
-    fn on_key_down(&mut self, _key: u8) {}
 
     fn title(&self) -> String {
         "DXSample".into()
@@ -34,76 +33,6 @@ trait DXSample {
 
     fn window_size(&self) -> (i32, i32) {
         (640, 480)
-    }
-}
-
-#[derive(Clone)]
-struct SampleCommandLine {
-    use_warp_device: bool,
-}
-
-fn build_command_line() -> SampleCommandLine {
-    let mut use_warp_device = false;
-
-    for arg in std::env::args() {
-        if arg.eq_ignore_ascii_case("-warp") || arg.eq_ignore_ascii_case("/warp") {
-            use_warp_device = true;
-        }
-    }
-
-    SampleCommandLine { use_warp_device }
-}
-
-fn sample_wndproc<S: DXSample>(sample: &mut S, message: u32, wparam: WPARAM) -> bool {
-    match message {
-        WM_KEYDOWN => {
-            sample.on_key_down(wparam.0 as u8);
-            true
-        }
-        WM_KEYUP => {
-            sample.on_key_up(wparam.0 as u8);
-            true
-        }
-        WM_PAINT => {
-            sample.update();
-            sample.render();
-            true
-        }
-        _ => false,
-    }
-}
-
-extern "system" fn wndproc<S: DXSample>(
-    window: HWND,
-    message: u32,
-    wparam: WPARAM,
-    lparam: LPARAM,
-) -> LRESULT {
-    match message {
-        WM_CREATE => {
-            unsafe {
-                let create_struct: &CREATESTRUCTA = transmute(lparam);
-                SetWindowLongPtrA(window, GWLP_USERDATA, create_struct.lpCreateParams as _);
-            }
-            LRESULT::default()
-        }
-        WM_DESTROY => {
-            unsafe { PostQuitMessage(0) };
-            LRESULT::default()
-        }
-        _ => {
-            let user_data = unsafe { GetWindowLongPtrA(window, GWLP_USERDATA) };
-            let sample = std::ptr::NonNull::<S>::new(user_data as _);
-            let handled = sample.map_or(false, |mut s| {
-                sample_wndproc(unsafe { s.as_mut() }, message, wparam)
-            });
-
-            if handled {
-                LRESULT::default()
-            } else {
-                unsafe { DefWindowProcA(window, message, wparam, lparam) }
-            }
-        }
     }
 }
 
@@ -175,8 +104,8 @@ mod d3d12_hello_triangle {
     }
 
     impl DXSample for Sample {
-        fn new(command_line: &SampleCommandLine) -> Result<Self> {
-            let (dxgi_factory, device) = create_device(command_line)?;
+        fn new() -> Result<Self> {
+            let (dxgi_factory, device) = create_device()?;
 
             Ok(Sample {
                 dxgi_factory,
@@ -432,7 +361,7 @@ mod d3d12_hello_triangle {
         }
     }
 
-    fn create_device(command_line: &SampleCommandLine) -> Result<(IDXGIFactory4, ID3D12Device)> {
+    fn create_device() -> Result<(IDXGIFactory4, ID3D12Device)> {
         if cfg!(debug_assertions) {
             unsafe {
                 let mut debug: Option<ID3D12Debug> = None;
@@ -450,11 +379,7 @@ mod d3d12_hello_triangle {
 
         let dxgi_factory: IDXGIFactory4 = unsafe { CreateDXGIFactory2(dxgi_factory_flags) }?;
 
-        let adapter = if command_line.use_warp_device {
-            unsafe { dxgi_factory.EnumWarpAdapter() }
-        } else {
-            get_hardware_adapter(&dxgi_factory)
-        }?;
+        let adapter = get_hardware_adapter(&dxgi_factory)?;
 
         let mut device: Option<ID3D12Device> = None;
         unsafe { D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_11_0, &mut device) }?;
@@ -724,14 +649,8 @@ fn main() -> Result<()>
 {
 
     // let instance = unsafe { GetModuleHandleA(None)? };
-
-    let command_line = build_command_line();
-    let mut sample = d3d12_hello_triangle::Sample::new(&command_line)?;
-    let mut title = sample.title();
-    if command_line.use_warp_device {
-        title.push_str(" (WARP)");
-    }
-    title.push('\0');
+    let mut sample = d3d12_hello_triangle::Sample::new()?;
+    let title = sample.title();
 
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
