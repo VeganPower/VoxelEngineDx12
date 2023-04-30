@@ -6,31 +6,12 @@ use winit::{
     platform::windows::WindowExtWindows,
 };
 use log::{info};
-use std::path::Path;
-// use array_init::*;
 
 use windows::{
-    core::*, Win32::Foundation::*, Win32::Graphics::Direct3D::Fxc::*, Win32::Graphics::Direct3D::*,
+    core::*, Win32::Foundation::*, Win32::Graphics::Direct3D::*,
     Win32::Graphics::Direct3D12::*, Win32::Graphics::Dxgi::Common::*, Win32::Graphics::Dxgi::*,
-    // Win32::System::LibraryLoader::*,
     Win32::System::Threading::*,
-    // Win32::UI::WindowsAndMessaging::*,
 };
-
-// trait DXSample {
-//     fn new() -> Result<Self>
-//     where
-//         Self: Sized;
-
-//     fn bind_to_window(&mut self, hwnd: &HWND) -> Result<()>;
-
-//     fn update(&mut self) {}
-//     fn render(&mut self) {}
-
-//     fn title(&self) -> String {
-//         "DXSample".into()
-//     }
-// }
 
 fn get_hardware_adapter(factory: &IDXGIFactory4) -> Result<IDXGIAdapter1> {
     for i in 0.. {
@@ -256,9 +237,6 @@ impl Sample {
         "D3D12 Hello Triangle".into()
     }
 
-    fn window_size(&self) -> (i32, i32) {
-        (1280, 720)
-    }
 
     fn render(&mut self) {
         if let Some(resources) = &mut self.resources {
@@ -414,61 +392,12 @@ fn convert_to_bytecode<'a, T>(data : &'a Vec<T>) -> D3D12_SHADER_BYTECODE
     }
 }
 
-fn create_pipeline_state(
-    device: &ID3D12Device,
-    root_signature: &ID3D12RootSignature,
-) -> Result<ID3D12PipelineState> {
-    let compile_flags = if cfg!(debug_assertions) {
-        D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION
-    } else {
-        0
-    };
-
+fn create_pipeline_state(device: &ID3D12Device, root_signature: &ID3D12RootSignature) -> Result<ID3D12PipelineState> {
     let vs_bin = std::fs::read("resources/vs.bin").unwrap();
     let ps_bin = std::fs::read("resources/ps.bin").unwrap();
 
     let vs_bytecode = convert_to_bytecode(&vs_bin);
     let ps_bytecode = convert_to_bytecode(&ps_bin);
-
-
-
-    // let exe_path = std::env::current_exe().ok().unwrap();
-    // let asset_path = exe_path.parent().unwrap();
-    // let shaders_hlsl_path = asset_path.join("shaders.hlsl");
-    // let shaders_hlsl = shaders_hlsl_path.to_str().unwrap();
-    // let shaders_hlsl: HSTRING = shaders_hlsl.into();
-
-    // let mut vertex_shader = None;
-    // let vertex_shader = unsafe {
-    //     D3DCompileFromFile(
-    //         &shaders_hlsl,
-    //         None,
-    //         None,
-    //         s!("VSMain"),
-    //         s!("vs_5_0"),
-    //         compile_flags,
-    //         0,
-    //         &mut vertex_shader,
-    //         None,
-    //     )
-    // }
-    // .map(|()| vertex_shader.unwrap())?;
-
-    // let mut pixel_shader = None;
-    // let pixel_shader = unsafe {
-    //     D3DCompileFromFile(
-    //         &shaders_hlsl,
-    //         None,
-    //         None,
-    //         s!("PSMain"),
-    //         s!("ps_5_0"),
-    //         compile_flags,
-    //         0,
-    //         &mut pixel_shader,
-    //         None,
-    //     )
-    // }
-    // .map(|()| pixel_shader.unwrap())?;
 
     let mut input_element_descs: [D3D12_INPUT_ELEMENT_DESC; 2] = [
         D3D12_INPUT_ELEMENT_DESC {
@@ -694,160 +623,3 @@ fn main() -> Result<()>
 
     Ok(())
 }
-
-
-// fn main()
-// {
-//     const FRAME_COUNT : u32 = 2;
-
-//     let event_loop = EventLoop::new();
-//     let window = WindowBuilder::new().build(&event_loop).unwrap();
-
-//     // Create Dx12 device and adapter
-//     let dxgi_factory_flags = if cfg!(debug_assertions) {
-//         DXGI_CREATE_FACTORY_DEBUG
-//     } else {
-//         0
-//     };
-//     let dxgi_factory : IDXGIFactory4  = unsafe { CreateDXGIFactory2(dxgi_factory_flags) }.unwrap();
-//     let adapter = get_hardware_adapter(&dxgi_factory).unwrap();
-//     let mut device: Option<ID3D12Device> = None;
-//     unsafe { D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_12_1, &mut device) };
-//     let device = device.unwrap();
-
-
-//     // Swap chain / Command queue
-//     let command_queue: ID3D12CommandQueue = unsafe
-//     {
-//         device.CreateCommandQueue(&D3D12_COMMAND_QUEUE_DESC {
-//             Type: D3D12_COMMAND_LIST_TYPE_DIRECT,
-//             ..Default::default()
-//         }).unwrap()
-//     };
-
-//     let physical_size = window.inner_size();
-
-//     let swap_chain_desc = DXGI_SWAP_CHAIN_DESC1 {
-//         BufferCount: FRAME_COUNT,
-//         Width: physical_size.width as u32,
-//         Height: physical_size.height as u32,
-//         Format: DXGI_FORMAT_R8G8B8A8_UNORM,
-//         BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
-//         SwapEffect: DXGI_SWAP_EFFECT_FLIP_DISCARD,
-//         SampleDesc: DXGI_SAMPLE_DESC {
-//             Count: 1,
-//             ..Default::default()
-//         },
-//         ..Default::default()
-//     };
-
-//     let hwnd = HWND(window.hwnd());
-//     let swap_chain: IDXGISwapChain3 = unsafe
-//     {
-//         dxgi_factory.CreateSwapChainForHwnd(&command_queue, hwnd, &swap_chain_desc, None, None, ).unwrap()
-//     }.cast().unwrap();
-
-//     // This sample does not support fullscreen transitions
-//     unsafe {
-//         dxgi_factory
-//             .MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER).unwrap();
-//     }
-
-//     let frame_index = unsafe { swap_chain.GetCurrentBackBufferIndex() };
-
-//     let rtv_heap: ID3D12DescriptorHeap = unsafe {
-//         device .CreateDescriptorHeap(&D3D12_DESCRIPTOR_HEAP_DESC
-//             {
-//                 NumDescriptors: FRAME_COUNT,
-//                 Type: D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-//                 ..Default::default()
-//             })
-//     }.unwrap();
-
-//     let rtv_descriptor_size = unsafe {
-//         device .GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
-//     } as usize;
-//     let rtv_handle = unsafe { rtv_heap.GetCPUDescriptorHandleForHeapStart() };
-
-//     let render_targets : [ID3D12Resource; FRAME_COUNT as usize] =
-//         array_init::try_array_init(|i: usize| -> Result<ID3D12Resource> {
-//             let render_target: ID3D12Resource = unsafe { swap_chain.GetBuffer(i as u32) }.unwrap();
-//             unsafe {
-//                 self.device.CreateRenderTargetView(
-//                     &render_target,
-//                     None,
-//                     D3D12_CPU_DESCRIPTOR_HANDLE {
-//                         ptr: rtv_handle.ptr + i * rtv_descriptor_size,
-//                     },
-//                 )
-//             };
-//             Ok(render_target)
-//         }).unwrap();
-
-//     let viewport = D3D12_VIEWPORT
-//     {
-//         TopLeftX: 0.0,
-//         TopLeftY: 0.0,
-//         Width: width as f32,
-//         Height: height as f32,
-//         MinDepth: D3D12_MIN_DEPTH,
-//         MaxDepth: D3D12_MAX_DEPTH,
-//     };
-
-//     let scissor_rect = RECT {
-//         left: 0,
-//         top: 0,
-//         right: width,
-//         bottom: height,
-//     };
-
-//     let command_allocator = unsafe { device.CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT) }.unwrap();
-
-//     let root_signature = create_root_signature(&self.device).unwrap();
-//     let pso = create_pipeline_state(&self.device, &root_signature).unwrap();
-
-//     let command_list: ID3D12GraphicsCommandList = unsafe {
-//         device.CreateCommandList(
-//             0,
-//             D3D12_COMMAND_LIST_TYPE_DIRECT,
-//             &command_allocator,
-//             &pso,
-//         )
-//     }.unwrap();
-//     unsafe {
-//         command_list.Close().unwrap();
-//     };
-
-//     let aspect_ratio = width as f32 / height as f32;
-//     let (vertex_buffer, vbv) = create_vertex_buffer(&device, aspect_ratio).unwrap();
-//     let fence = unsafe { device.CreateFence(0, D3D12_FENCE_FLAG_NONE) }.unwrap();
-
-//     let fence_value = 1;
-
-//     // let fence_event = unsafe { CreateEventA(None, false, false, None).unwrap() };
-
-//     event_loop.run(move |event, _, control_flow|
-//     {
-//         // control_flow.set_poll();
-//         control_flow.set_wait();
-
-//         match event {
-//             Event::WindowEvent {
-//                 event: WindowEvent::CloseRequested,
-//                 ..
-//             } => {
-//                 info!("The close button was pressed; stopping");
-//                 control_flow.set_exit();
-//             },
-//             Event::MainEventsCleared =>
-//             {
-//                 window.request_redraw();
-//                 // frame
-//             },
-//             Event::RedrawRequested(_) =>
-//             {
-//             },
-//             _ => ()
-//         }
-//     });
-// }
