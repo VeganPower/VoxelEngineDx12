@@ -1,0 +1,7 @@
+
+[workspace]
+
+members = [
+    "backend",
+    "voxel_engine"
+]
